@@ -24,15 +24,45 @@ Der Sketch testet der Reihe nach:
 
 ## Einrichtung in der Arduino IDE
 
-1. Das Boardpaket **esp32 by Espressif Systems** installieren.
-2. Als Board **ESP32S3 Dev Module** auswählen (USB CDC on Boot: *Enabled*).
-3. Die **TinyGSM**-Bibliothek installieren — dabei den LilyGO-Fork mit
+1. Das Boardpaket **esp32 by Espressif Systems** installieren (Board Manager URL:
+   `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`).
+2. Die **TinyGSM**-Bibliothek installieren — dabei den LilyGO-Fork mit
    A7608-Unterstützung verwenden, nicht das Haupt-TinyGSM:
    https://github.com/lewisxhe/TinyGSM
+3. Unter **Werkzeuge** (Tools) die folgenden Board-Parameter setzen (siehe
+   Tabelle unten).
 4. `T-A7608X-ESP32S3_FullTest.ino` öffnen, die Konstante `apn` an deinen
    SIM-Anbieter anpassen und über den USB-C-Port des Boards hochladen.
 5. Den Seriellen Monitor mit 115200 Baud öffnen, um die Testergebnisse
    zu sehen.
+
+### Arduino-IDE Board-Einstellungen (Werkzeuge-Menü)
+
+Das Board verwendet ein ESP32-S3-WROOM-1 (N16R8): 16 MB Flash, 8 MB PSRAM
+(Octal SPI). Es gibt keine eigene LilyGO-Board-Definition für dieses Modul —
+als Board wird das generische **„ESP32S3 Dev Module“** verwendet und die
+folgenden Parameter manuell gesetzt:
+
+| Parameter               | Wert                                      |
+|--------------------------|-------------------------------------------|
+| Board                    | `ESP32S3 Dev Module`                      |
+| USB CDC On Boot          | `Enabled` *(siehe Hinweis unten)*         |
+| CPU Frequency            | `240MHz (WiFi)`                           |
+| Flash Mode               | `QIO 80MHz`                               |
+| Flash Size               | `16MB (128Mb)`                            |
+| PSRAM                    | `OPI PSRAM`                               |
+| Partition Scheme         | `16M Flash (3MB APP/9.9MB FATFS)`         |
+| Upload Mode              | `UART0 / Hardware CDC`                    |
+| Upload Speed             | `921600`                                  |
+| USB Mode                 | `Hardware CDC and JTAG`                   |
+| Core Debug Level         | `None`                                    |
+
+**Hinweis zu USB CDC On Boot:** Wird das Board über USB-C betrieben und
+programmiert, muss diese Option auf `Enabled` stehen, damit `Serial`
+(Ausgaben, Serieller Monitor) über den USB-C-Port funktioniert. Wird das
+Board stattdessen über eine externe 5V-Stromversorgung betrieben, sollte
+die Option auf `Disabled` gesetzt werden — sonst wartet das Board beim
+Start auf eine USB-Verbindung.
 
 ## Pin-Belegung
 
