@@ -1,33 +1,33 @@
 /*
- * LilyGO T-A7608X-ESP32S3 -- Full Hardware Test Sketch
+ * LilyGO T-A7608X-ESP32S3 -- Vollständiger Hardware-Testsketch
  * ------------------------------------------------------
- * Board silkscreen: "A7608-ESP32S3  2023-08-24  V1.0"
+ * Aufdruck auf der Platine: "A7608-ESP32S3  2023-08-24  V1.0"
  * MCU:    Espressif ESP32-S3-WROOM-1
- * Modem:  SIMCom A7608E-H (LTE Cat-1 + built-in GNSS)
+ * Modem:  SIMCom A7608E-H (LTE Cat-1 + eingebautes GNSS)
  *
- * This sketch exercises every major peripheral on the board in one run:
- *   1. Modem power-on sequence + AT communication
- *   2. SIM card detection (IMEI / IMSI)
- *   3. Network registration + signal quality
- *   4. LTE data connection + HTTP GET
- *   5. GNSS fix via the modem's built-in GNSS engine (needs the GNSS antenna)
- *   6. Battery voltage via ADC
- *   7. microSD card read/write (TF card slot)
+ * Dieser Sketch testet in einem Durchlauf alle wichtigen Peripheriekomponenten
+ * des Boards:
+ *   1. Einschaltsequenz des Modems + AT-Kommunikation
+ *   2. Erkennung der SIM-Karte (IMEI / IMSI)
+ *   3. Netzanmeldung + Signalqualität
+ *   4. LTE-Datenverbindung + HTTP-GET
+ *   5. GNSS-Fix über die eingebaute GNSS-Engine des Modems (benötigt die GNSS-Antenne)
+ *   6. Batteriespannung über den ADC
+ *   7. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
  *
- * Requirements:
- *   - Arduino core for ESP32 (esp32 by Espressif Systems), board:
- *       "ESP32S3 Dev Module" (or "UM ESP32-S3" family), USB CDC on boot: enabled
- *   - TinyGSM library, LilyGO fork with A7608 support:
+ * Voraussetzungen:
+ *   - Arduino-Core für ESP32 (esp32 by Espressif Systems), Board:
+ *       "ESP32S3 Dev Module" (bzw. Familie "UM ESP32-S3"), USB CDC on boot: aktiviert
+ *   - TinyGSM-Bibliothek, LilyGO-Fork mit A7608-Unterstützung:
  *       https://github.com/lewisxhe/TinyGSM
- *     (the mainline TinyGSM master branch does NOT support A7608 well --
- *      use the fork above, install as a ZIP library)
- *   - A SIM card inserted, the LTE antenna connected to the modem's main
- *     antenna connector, and the GNSS antenna connected to the "GNSS" u.FL
- *     connector.
+ *     (der Haupt-Branch von TinyGSM unterstützt A7608 nicht zuverlässig --
+ *      bitte den obigen Fork verwenden und als ZIP-Bibliothek installieren)
+ *   - Eine eingelegte SIM-Karte, die LTE-Antenne am Hauptantennenanschluss
+ *     des Modems, sowie die GNSS-Antenne am u.FL-Anschluss "GNSS".
  *
- * Pin mapping is taken from LilyGO's official
- * Xinyuan-LilyGO/LilyGo-Modem-Series repository (utilities.h,
- * LILYGO_T_A7608X_S3 board definition).
+ * Die Pin-Belegung stammt aus LilyGOs offiziellem Repository
+ * Xinyuan-LilyGO/LilyGo-Modem-Series (utilities.h,
+ * Board-Definition LILYGO_T_A7608X_S3).
  */
 
 #define TINY_GSM_MODEM_A7608
@@ -38,7 +38,7 @@
 #include <SD.h>
 #include <SPI.h>
 
-// ---------------- Pin mapping: T-A7608X-ESP32S3 V1.0 ----------------
+// ---------------- Pin-Belegung: T-A7608X-ESP32S3 V1.0 ----------------
 #define MODEM_BAUDRATE      115200
 #define MODEM_DTR_PIN       7
 #define MODEM_TX_PIN        17
@@ -56,7 +56,7 @@
 
 #define SerialAT Serial1
 
-// ---------------- APN: adjust to your SIM provider! ----------------
+// ---------------- APN: bitte an deinen SIM-Anbieter anpassen! ----------------
 const char apn[]      = "internet";
 const char gprsUser[] = "";
 const char gprsPass[] = "";
@@ -78,16 +78,16 @@ void modemPowerOn() {
   pinMode(MODEM_RESET_PIN, OUTPUT);
   pinMode(MODEM_DTR_PIN, OUTPUT);
 
-  digitalWrite(MODEM_DTR_PIN, LOW); // LOW = keep modem awake, no sleep
+  digitalWrite(MODEM_DTR_PIN, LOW); // LOW = Modem bleibt wach, kein Sleep
 
-  // Hardware reset pulse
+  // Hardware-Reset-Impuls
   digitalWrite(MODEM_RESET_PIN, !MODEM_RESET_LEVEL);
   delay(100);
   digitalWrite(MODEM_RESET_PIN, MODEM_RESET_LEVEL);
   delay(2600);
   digitalWrite(MODEM_RESET_PIN, !MODEM_RESET_LEVEL);
 
-  // PWRKEY pulse to boot the modem
+  // PWRKEY-Impuls, um das Modem zu starten
   digitalWrite(BOARD_PWRKEY_PIN, LOW);
   delay(100);
   digitalWrite(BOARD_PWRKEY_PIN, HIGH);
@@ -209,7 +209,7 @@ void testBattery() {
   printHeader("6) BATTERY / ADC TEST");
   analogReadResolution(12);
   int raw = analogRead(BOARD_BAT_ADC_PIN);
-  // This board has a 1:2 voltage divider in front of the ADC pin
+  // Dieses Board hat einen 1:2-Spannungsteiler vor dem ADC-Pin
   float voltage = (raw / 4095.0f) * 3.3f * 2.0f;
   Serial.print(F("Raw ADC: "));    Serial.println(raw);
   Serial.print(F("Battery ~= ")); Serial.print(voltage, 2); Serial.println(F(" V"));
@@ -271,5 +271,5 @@ void setup() {
 }
 
 void loop() {
-  // All tests run once in setup(); nothing to do here.
+  // Alle Tests laufen einmalig in setup(); hier gibt es nichts zu tun.
 }
