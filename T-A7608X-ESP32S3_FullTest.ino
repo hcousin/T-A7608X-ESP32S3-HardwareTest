@@ -28,6 +28,24 @@
  * Die Pin-Belegung stammt aus LilyGOs offiziellem Repository
  * Xinyuan-LilyGO/LilyGo-Modem-Series (utilities.h,
  * Board-Definition LILYGO_T_A7608X_S3).
+ *
+ * Arduino-IDE Board-Einstellungen (Werkzeuge-Menü):
+ *   Board:                    "ESP32S3 Dev Module"
+ *   Modul:                    ESP32-S3-WROOM-1 (N16R8) -> 16 MB Flash, 8 MB PSRAM
+ *   USB CDC On Boot:          "Enabled"   (nötig für Serial-Ausgabe über den USB-C-Port)
+ *   CPU Frequency:            "240MHz (WiFi)"
+ *   Flash Mode:                "QIO 80MHz"
+ *   Flash Size:               "16MB (128Mb)"
+ *   PSRAM:                    "OPI PSRAM"
+ *   Partition Scheme:         "16M Flash (3MB APP/9.9MB FATFS)"
+ *   Upload Mode:              "UART0 / Hardware CDC"
+ *   Upload Speed:             "921600"
+ *   USB Mode:                 "Hardware CDC and JTAG"
+ *   Core Debug Level:         "None"
+ *
+ * Hinweis: Wird das Board über eine externe 5V-Versorgung statt über
+ * USB-C betrieben, muss "USB CDC On Boot" auf "Disabled" gesetzt werden,
+ * da das Board sonst beim Start auf eine USB-Verbindung wartet.
  */
 
 #define TINY_GSM_MODEM_A7608
