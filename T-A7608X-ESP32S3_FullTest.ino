@@ -19,9 +19,11 @@
  *   - Arduino-Core für ESP32 (esp32 by Espressif Systems), Board:
  *       "ESP32S3 Dev Module" (bzw. Familie "UM ESP32-S3"), USB CDC on boot: aktiviert
  *   - TinyGSM-Bibliothek, LilyGO-Fork mit A7608-Unterstützung:
- *       https://github.com/lewisxhe/TinyGSM
- *     (der Haupt-Branch von TinyGSM unterstützt A7608 nicht zuverlässig --
- *      bitte den obigen Fork verwenden und als ZIP-Bibliothek installieren)
+ *       https://github.com/lewisxhe/TinyGSM-fork
+ *     (das offizielle TinyGSM (vshymanskyy/TinyGSM) unterstützt A7608 NICHT
+ *      -- diese Bibliothek muss zuerst deinstalliert/entfernt werden, sonst
+ *      bricht die Kompilierung mit "#error Please define GSM modem model" ab.
+ *      Danach den obigen Fork als ZIP-Bibliothek installieren.)
  *   - Eine eingelegte SIM-Karte, die LTE-Antenne am Hauptantennenanschluss
  *     des Modems, sowie die GNSS-Antenne am u.FL-Anschluss "GNSS".
  *
