@@ -1,43 +1,44 @@
 # T-A7608X-ESP32S3 Full Hardware Test
 
-Arduino test sketch for the LilyGO **T-A7608X-ESP32S3** board
-(silkscreen: `A7608-ESP32S3 2023-08-24 V1.0`) with a SIMCom **A7608E-H**
-LTE Cat-1 modem (with built-in GNSS) and an ESP32-S3-WROOM-1 MCU.
+Arduino-Testsketch für das LilyGO-Board **T-A7608X-ESP32S3**
+(Aufdruck: `A7608-ESP32S3 2023-08-24 V1.0`) mit einem SIMCom-**A7608E-H**-
+LTE-Cat-1-Modem (mit eingebautem GNSS) und einem ESP32-S3-WROOM-1-MCU.
 
-The sketch tests, in order:
+Der Sketch testet der Reihe nach:
 
-1. Modem power-on sequence + AT communication
-2. SIM card detection (IMEI / IMSI)
-3. Network registration + signal quality
-4. LTE data connection + HTTP GET (`httpbin.org/ip`)
-5. GNSS fix via the modem's built-in GNSS engine
-6. Battery voltage via ADC
-7. microSD card read/write (TF card slot)
+1. Einschaltsequenz des Modems + AT-Kommunikation
+2. Erkennung der SIM-Karte (IMEI / IMSI)
+3. Netzanmeldung + Signalqualität
+4. LTE-Datenverbindung + HTTP-GET (`httpbin.org/ip`)
+5. GNSS-Fix über die eingebaute GNSS-Engine des Modems
+6. Batteriespannung über den ADC
+7. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
 
-## Hardware setup
+## Hardware-Vorbereitung
 
-- Insert a SIM card into the SIM slot.
-- Connect the **LTE antenna** (Full Band LTE, 698–960/1710–2690 MHz) to the
-  modem's main antenna connector.
-- Connect the **GNSS antenna** to the u.FL connector labeled `GNSS`.
-- Optionally insert a microSD card.
+- SIM-Karte in den SIM-Slot einlegen.
+- Die **LTE-Antenne** (Full Band LTE, 698–960/1710–2690 MHz) am
+  Hauptantennenanschluss des Modems anschließen.
+- Die **GNSS-Antenne** am mit `GNSS` beschrifteten u.FL-Anschluss anschließen.
+- Optional eine microSD-Karte einlegen.
 
-## Arduino IDE setup
+## Einrichtung in der Arduino IDE
 
-1. Install the **esp32 by Espressif Systems** board package.
-2. Select board **ESP32S3 Dev Module** (USB CDC On Boot: *Enabled*).
-3. Install the **TinyGSM** library — use the LilyGO fork with A7608
-   support, not mainline TinyGSM:
+1. Das Boardpaket **esp32 by Espressif Systems** installieren.
+2. Als Board **ESP32S3 Dev Module** auswählen (USB CDC on Boot: *Enabled*).
+3. Die **TinyGSM**-Bibliothek installieren — dabei den LilyGO-Fork mit
+   A7608-Unterstützung verwenden, nicht das Haupt-TinyGSM:
    https://github.com/lewisxhe/TinyGSM
-4. Open `T-A7608X-ESP32S3_FullTest.ino`, adjust the `apn` constant to
-   match your SIM provider, and upload via the board's USB-C port.
-5. Open the Serial Monitor at 115200 baud to see the test results.
+4. `T-A7608X-ESP32S3_FullTest.ino` öffnen, die Konstante `apn` an deinen
+   SIM-Anbieter anpassen und über den USB-C-Port des Boards hochladen.
+5. Den Seriellen Monitor mit 115200 Baud öffnen, um die Testergebnisse
+   zu sehen.
 
-## Pin mapping
+## Pin-Belegung
 
-Taken from LilyGO's official
+Entnommen aus LilyGOs offiziellem Repository
 [LilyGo-Modem-Series](https://github.com/Xinyuan-LilyGO/LilyGo-Modem-Series)
-repository (`utilities.h`, `LILYGO_T_A7608X_S3` board definition):
+(`utilities.h`, Board-Definition `LILYGO_T_A7608X_S3`):
 
 | Signal            | GPIO |
 |-------------------|------|
@@ -53,9 +54,9 @@ repository (`utilities.h`, `LILYGO_T_A7608X_S3` board definition):
 | BOARD_MISO_PIN    | 47   |
 | BOARD_SD_CS_PIN   | 13   |
 
-## Notes
+## Hinweise
 
-- GNSS fix acquisition needs an open sky view and can take up to a
-  couple of minutes on a cold start.
-- The battery voltage reading assumes a 1:2 voltage divider in front
-  of the ADC pin, as used on this board.
+- Für einen GNSS-Fix wird freie Sicht zum Himmel benötigt; bei einem
+  Kaltstart kann das bis zu einigen Minuten dauern.
+- Bei der Batteriespannungsmessung wird von einem 1:2-Spannungsteiler
+  vor dem ADC-Pin ausgegangen, wie er auf diesem Board verbaut ist.
