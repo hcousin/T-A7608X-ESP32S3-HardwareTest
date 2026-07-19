@@ -27,8 +27,13 @@ Der Sketch testet der Reihe nach:
 1. Das Boardpaket **esp32 by Espressif Systems** installieren (Board Manager URL:
    `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`).
 2. Die **TinyGSM**-Bibliothek installieren — dabei den LilyGO-Fork mit
-   A7608-Unterstützung verwenden, nicht das Haupt-TinyGSM:
-   https://github.com/lewisxhe/TinyGSM
+   A7608-Unterstützung verwenden, **nicht** das offizielle TinyGSM:
+   https://github.com/lewisxhe/TinyGSM-fork
+   (Sketch → Include Library → Add .ZIP Library…). Falls bereits die
+   Standardbibliothek `vshymanskyy/TinyGSM` installiert ist, muss sie zuerst
+   entfernt werden (Ordner `libraries/TinyGSM` löschen) — sonst schlägt die
+   Kompilierung mit `#error "Please define GSM modem model"` fehl, da diese
+   Bibliothek A7608 nicht kennt.
 3. Unter **Werkzeuge** (Tools) die folgenden Board-Parameter setzen (siehe
    Tabelle unten).
 4. `T-A7608X-ESP32S3_FullTest.ino` öffnen, die Konstante `apn` an deinen
