@@ -198,16 +198,29 @@ void testGprsAndHttp() {
 
 void testGNSS() {
   printHeader("5) GNSS / GPS TEST");
-  Serial.println(F("Powering on built-in GNSS engine..."));
-  modem.sendAT("+CGNSSPWR=1");
-  modem.waitResponse(10000L);
+  Serial.println(F("Enabling built-in GNSS engine..."));
+  int retry = 0;
+  while (!modem.enableGPS()) {
+    Serial.print('.');
+    if (retry++ > 15) {
+      Serial.println(F("\n[WARN] Could not enable GNSS (check firmware / module variant)."));
+      return;
+    }
+    delay(1000);
+  }
+  Serial.println();
+  Serial.println(F("[OK] GNSS enabled."));
+  modem.setGPSBaud(115200);
 
   Serial.println(F("Waiting for a fix (up to 120s, needs open sky view)..."));
-  float lat = 0, lon = 0;
+  uint8_t fixMode = 0;
+  float   lat = 0, lon = 0, speed = 0, alt = 0, accuracy = 0;
+  int     vsat = 0, usat = 0, year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
   unsigned long t0 = millis();
   bool fixed = false;
   while (millis() - t0 < 120000L) {
-    if (modem.getGPS(&lat, &lon)) {
+    if (modem.getGPS(&fixMode, &lat, &lon, &speed, &alt, &vsat, &usat, &accuracy,
+                      &year, &month, &day, &hour, &minute, &second)) {
       fixed = true;
       break;
     }
@@ -218,11 +231,13 @@ void testGNSS() {
   if (fixed) {
     Serial.print(F("[OK] Fix acquired -> Lat: ")); Serial.print(lat, 6);
     Serial.print(F("  Lon: ")); Serial.println(lon, 6);
+    Serial.print(F("Satelliten sichtbar: ")); Serial.print(vsat);
+    Serial.print(F("  Genauigkeit: ")); Serial.println(accuracy);
+    Serial.printf("UTC-Zeit: %04d-%02d-%02d %02d:%02d:%02d\n", year, month, day, hour, minute, second);
   } else {
     Serial.println(F("[WARN] No fix within timeout (normal indoors/without sky view)."));
   }
-  modem.sendAT("+CGNSSPWR=0");
-  modem.waitResponse(5000L);
+  modem.disableGPS();
 }
 
 void testBattery() {
