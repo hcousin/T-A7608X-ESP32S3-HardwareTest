@@ -12,8 +12,10 @@
  *   3. Netzanmeldung + Signalqualität
  *   4. LTE-Datenverbindung + HTTP-GET
  *   5. GNSS-Fix über die eingebaute GNSS-Engine des Modems (benötigt die GNSS-Antenne)
- *   6. Batteriespannung über den ADC
- *   7. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
+ *   6. Reverse-Geocoding: aus den GPS-Koordinaten per Nominatim/OpenStreetMap (HTTPS)
+ *      eine Adresse ermitteln
+ *   7. Batteriespannung über den ADC
+ *   8. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
  *
  * Voraussetzungen:
  *   - Arduino-Core für ESP32 (esp32 by Espressif Systems), Board:
@@ -81,8 +83,13 @@ const char apn[]      = "internet";
 const char gprsUser[] = "";
 const char gprsPass[] = "";
 
-TinyGsm       modem(SerialAT);
-TinyGsmClient client(modem);
+TinyGsm             modem(SerialAT);
+TinyGsmClient        client(modem);
+TinyGsmClientSecure  secureClient(modem, 0); // A76xx-eigener TLS-Stack (AT+CCH...), mux 0
+
+// Vom GNSS-Test befuellt, vom Reverse-Geocoding-Test genutzt
+bool  gpsFixValid = false;
+float gpsLat = 0, gpsLon = 0;
 
 // ---------------------------------------------------------------------
 void printHeader(const char *title) {
@@ -253,6 +260,9 @@ void testGNSS() {
   }
   Serial.println();
   if (fixed) {
+    gpsFixValid = true;
+    gpsLat = lat;
+    gpsLon = lon;
     Serial.print(F("[OK] Fix acquired -> Lat: ")); Serial.print(lat, 6);
     Serial.print(F("  Lon: ")); Serial.println(lon, 6);
     Serial.print(F("Satelliten sichtbar: ")); Serial.print(vsat);
@@ -269,8 +279,68 @@ void testGNSS() {
   modem.disableGPS();
 }
 
+void testReverseGeocode() {
+  printHeader("6) REVERSE GEOCODING (Adresse zu GPS-Koordinaten)");
+  if (!gpsFixValid) {
+    Serial.println(F("[SKIP] Kein gueltiger GPS-Fix aus Test 5 vorhanden, ueberspringe."));
+    return;
+  }
+
+  Serial.print(F("Verbinde erneut mit APN '")); Serial.print(apn); Serial.println(F("'..."));
+  if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
+    Serial.println(F("[FAIL] Datenverbindung fehlgeschlagen."));
+    return;
+  }
+
+  char path[160];
+  snprintf(path, sizeof(path),
+           "/reverse?format=jsonv2&lat=%.6f&lon=%.6f&zoom=18&addressdetails=1",
+           gpsLat, gpsLon);
+
+  Serial.print(F("Frage Adresse bei nominatim.openstreetmap.org ab fuer ("));
+  Serial.print(gpsLat, 6); Serial.print(F(", ")); Serial.print(gpsLon, 6); Serial.println(F(")..."));
+
+  // Nominatim erzwingt HTTPS -> hierfuer den eingebauten TLS-Stack des A76xx nutzen (AT+CCH...)
+  if (secureClient.connect("nominatim.openstreetmap.org", 443, 30)) {
+    secureClient.print(F("GET "));
+    secureClient.print(path);
+    secureClient.println(F(" HTTP/1.0"));
+    secureClient.println(F("Host: nominatim.openstreetmap.org"));
+    // Nominatim-Nutzungsrichtlinie verlangt einen aussagekraeftigen User-Agent (kein Standard-Header)
+    secureClient.println(F("User-Agent: T-A7608X-ESP32S3-HardwareTest/1.0"));
+    secureClient.println(F("Connection: close"));
+    secureClient.println();
+
+    String response;
+    unsigned long t0 = millis();
+    while (secureClient.connected() && millis() - t0 < 15000L) {
+      while (secureClient.available()) {
+        response += (char)secureClient.read();
+        t0 = millis();
+      }
+    }
+    secureClient.stop();
+
+    int idx = response.indexOf("\"display_name\":\"");
+    if (idx >= 0) {
+      int start = idx + strlen("\"display_name\":\"");
+      int end   = response.indexOf('"', start);
+      String address = response.substring(start, end);
+      Serial.print(F("[OK] Adresse: ")); Serial.println(address);
+    } else {
+      Serial.println(F("[WARN] Konnte 'display_name' nicht in der Antwort finden."));
+      Serial.print(F("Antwort (gekuerzt, erste 300 Zeichen): "));
+      Serial.println(response.substring(0, 300));
+    }
+  } else {
+    Serial.println(F("[FAIL] Konnte keine TLS-Verbindung zu nominatim.openstreetmap.org aufbauen."));
+  }
+
+  modem.gprsDisconnect();
+}
+
 void testBattery() {
-  printHeader("6) BATTERY / ADC TEST");
+  printHeader("7) BATTERY / ADC TEST");
   analogReadResolution(12);
   int raw = analogRead(BOARD_BAT_ADC_PIN);
   // Dieses Board hat einen 1:2-Spannungsteiler vor dem ADC-Pin
@@ -280,7 +350,7 @@ void testBattery() {
 }
 
 void testSDCard() {
-  printHeader("7) microSD CARD TEST");
+  printHeader("8) microSD CARD TEST");
   SPIClass sdSPI(HSPI);
   sdSPI.begin(BOARD_SCK_PIN, BOARD_MISO_PIN, BOARD_MOSI_PIN, BOARD_SD_CS_PIN);
   if (!SD.begin(BOARD_SD_CS_PIN, sdSPI)) {
@@ -326,6 +396,7 @@ void setup() {
       testGprsAndHttp();
     }
     testGNSS();
+    testReverseGeocode();
   }
 
   testBattery();
