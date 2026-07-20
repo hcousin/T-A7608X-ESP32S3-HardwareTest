@@ -174,24 +174,41 @@ void testGprsAndHttp() {
   Serial.println(F("[OK] Data connection established."));
   Serial.print(F("Local IP: ")); Serial.println(modem.getLocalIP());
 
-  Serial.println(F("Requesting http://httpbin.org/ip ..."));
-  if (client.connect("httpbin.org", 80)) {
-    client.println(F("GET /ip HTTP/1.1"));
-    client.println(F("Host: httpbin.org"));
+  Serial.println(F("Requesting http://api.ipify.org/ ..."));
+  if (client.connect("api.ipify.org", 80)) {
+    client.println(F("GET / HTTP/1.1"));
+    client.println(F("Host: api.ipify.org"));
     client.println(F("Connection: close"));
     client.println();
 
+    String statusLine = client.readStringUntil('\n');
+    Serial.print(F("HTTP-Status: ")); Serial.println(statusLine);
+
+    // Restliche Header ueberspringen bis zur Leerzeile
+    String line;
+    do {
+      line = client.readStringUntil('\n');
+    } while (line.length() > 1 && client.connected());
+
+    // Body (die oeffentliche IP-Adresse) auslesen
+    String body;
     unsigned long t0 = millis();
     while (client.connected() && millis() - t0 < 10000L) {
       while (client.available()) {
-        Serial.write(client.read());
+        body += (char)client.read();
         t0 = millis();
       }
     }
     client.stop();
-    Serial.println(F("\n[OK] HTTP request finished."));
+
+    if (statusLine.indexOf("200") > 0) {
+      Serial.print(F("[OK] Oeffentliche IP laut api.ipify.org: ")); Serial.println(body);
+    } else {
+      Serial.print(F("[WARN] Unerwarteter HTTP-Status. Antwort: ")); Serial.println(body);
+    }
+    Serial.println(F("[OK] HTTP request finished."));
   } else {
-    Serial.println(F("[FAIL] Could not connect to httpbin.org."));
+    Serial.println(F("[FAIL] Could not connect to api.ipify.org."));
   }
   modem.gprsDisconnect();
 }
