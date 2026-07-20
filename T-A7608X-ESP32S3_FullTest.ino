@@ -212,20 +212,27 @@ void testGNSS() {
   Serial.println(F("[OK] GNSS enabled."));
   modem.setGPSBaud(115200);
 
-  Serial.println(F("Waiting for a fix (up to 120s, needs open sky view)..."));
+  Serial.println(F("Waiting for a fix (up to 5 min, needs open sky view -- window/roof usually NOT enough)..."));
+  Serial.println(F("Raw AT+CGNSSINFO output every 5s (fixMode,GPS-sat,GLONASS-sat,BEIDOU-sat,lat,N/S,lon,E/W,date,time,...):"));
   uint8_t fixMode = 0;
   float   lat = 0, lon = 0, speed = 0, alt = 0, accuracy = 0;
   int     vsat = 0, usat = 0, year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
   unsigned long t0 = millis();
+  unsigned long lastPrint = 0;
   bool fixed = false;
-  while (millis() - t0 < 120000L) {
+  while (millis() - t0 < 300000L) {
     if (modem.getGPS(&fixMode, &lat, &lon, &speed, &alt, &vsat, &usat, &accuracy,
                       &year, &month, &day, &hour, &minute, &second)) {
       fixed = true;
       break;
     }
-    Serial.print('.');
-    delay(2000);
+    // Rohdaten alle 5s zur Diagnose ausgeben (zeigt, ob ueberhaupt Satelliten sichtbar sind)
+    if (millis() - lastPrint > 5000) {
+      lastPrint = millis();
+      Serial.print(F("  [")); Serial.print((millis() - t0) / 1000); Serial.print(F("s] "));
+      Serial.println(modem.getGPSraw());
+    }
+    delay(200);
   }
   Serial.println();
   if (fixed) {
@@ -235,7 +242,12 @@ void testGNSS() {
     Serial.print(F("  Genauigkeit: ")); Serial.println(accuracy);
     Serial.printf("UTC-Zeit: %04d-%02d-%02d %02d:%02d:%02d\n", year, month, day, hour, minute, second);
   } else {
-    Serial.println(F("[WARN] No fix within timeout (normal indoors/without sky view)."));
+    Serial.println(F("[WARN] No fix within timeout."));
+    Serial.println(F("  -> Wenn die Rohdaten oben komplett leer waren (nur Kommas), sieht das Modul"));
+    Serial.println(F("     GAR KEINE Satelliten: bitte mit freier Sicht zum Himmel im Freien testen"));
+    Serial.println(F("     (Fenster/Dach reichen meist nicht) und ein paar Minuten laenger warten."));
+    Serial.println(F("  -> Wenn Satellitenzahlen > 0 auftauchten, aber kein Fix: einfach laenger warten,"));
+    Serial.println(F("     ein Kaltstart kann bis zu ~12 Minuten dauern."));
   }
   modem.disableGPS();
 }
