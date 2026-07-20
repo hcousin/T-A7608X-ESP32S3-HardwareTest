@@ -9,7 +9,7 @@ Der Sketch testet der Reihe nach:
 1. Einschaltsequenz des Modems + AT-Kommunikation
 2. Erkennung der SIM-Karte (IMEI / IMSI)
 3. Netzanmeldung + Signalqualität
-4. LTE-Datenverbindung + HTTP-GET (`httpbin.org/ip`)
+4. LTE-Datenverbindung + HTTP-GET (`api.ipify.org` — liefert die öffentliche IP)
 5. GNSS-Fix über die eingebaute GNSS-Engine des Modems
 6. Batteriespannung über den ADC
 7. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
