@@ -11,8 +11,9 @@ Der Sketch testet der Reihe nach:
 3. Netzanmeldung + Signalqualität
 4. LTE-Datenverbindung + HTTP-GET (`api.ipify.org` — liefert die öffentliche IP)
 5. GNSS-Fix über die eingebaute GNSS-Engine des Modems
-6. Batteriespannung über den ADC
-7. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
+6. Reverse-Geocoding: Adresse zu den GPS-Koordinaten per Nominatim/OpenStreetMap (HTTPS)
+7. Batteriespannung über den ADC
+8. Lesen/Schreiben auf der microSD-Karte (TF-Kartenslot)
 
 ## Hardware-Vorbereitung
 
@@ -95,3 +96,11 @@ Entnommen aus LilyGOs offiziellem Repository
   Kaltstart kann das bis zu einigen Minuten dauern.
 - Bei der Batteriespannungsmessung wird von einem 1:2-Spannungsteiler
   vor dem ADC-Pin ausgegangen, wie er auf diesem Board verbaut ist.
+- Das Reverse-Geocoding nutzt [Nominatim](https://nominatim.openstreetmap.org)
+  (OpenStreetMap) über HTTPS — dafür kommt der im A76xx-Modem eingebaute
+  TLS-Stack (`AT+CCH...`-Befehle, `TinyGsmClientSecure`) zum Einsatz, eine
+  separate SSL-Bibliothek ist nicht nötig. Der Test läuft nur, wenn Test 5
+  einen GPS-Fix liefern konnte. Nominatims Nutzungsrichtlinie erlaubt max.
+  1 Anfrage pro Sekunde — für gelegentliche Einzeltests im Sketch unkritisch,
+  bei häufigeren Wiederholungen bitte einen eigenen Nominatim-Server oder
+  einen kommerziellen Geocoding-Dienst verwenden.
