@@ -335,6 +335,19 @@ void testReverseGeocode() {
     return;
   }
 
+  // SSL-Kontext 0 konfigurieren: TLS aktivieren, KEINE Serverzertifikatspruefung
+  // (kein CA-Upload noetig) und -- der Kernpunkt -- SNI aktivieren. Ohne SNI
+  // schickt das Modem beim TLS-Handshake keinen Hostnamen mit, viele Server
+  // (u.a. Nominatim) antworten dann mit "421 Misdirected Request".
+  atSend("+CSSLCFG=\"sslversion\",0,4"); // 4 = alle TLS-Versionen erlauben
+  atRead(2000);
+  atSend("+CSSLCFG=\"authmode\",0,0");   // 0 = keine Serverzertifikatspruefung
+  atRead(2000);
+  atSend("+CSSLCFG=\"enableSNI\",0,1");  // SNI aktivieren -- behebt den 421-Fehler
+  atRead(2000);
+  atSend("+HTTPPARA=\"SSLCFG\",0");      // HTTP-Client an SSL-Kontext 0 binden
+  atRead(2000);
+
   atSend("+HTTPPARA=\"CID\",1");
   atRead(2000);
 
