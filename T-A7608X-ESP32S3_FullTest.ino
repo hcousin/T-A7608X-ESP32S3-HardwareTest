@@ -105,12 +105,20 @@ void atSend(const String &cmd) {
 String atRead(unsigned long timeoutMs, const char *token = "OK") {
   String resp;
   unsigned long t0 = millis();
+  unsigned long lastByte = millis();
+  bool tokenSeen = false;
   while (millis() - t0 < timeoutMs) {
     while (SerialAT.available()) {
       resp += (char)SerialAT.read();
-      t0 = millis();
+      lastByte = millis();
     }
-    if (resp.indexOf(token) >= 0) break;
+    if (!tokenSeen && resp.indexOf(token) >= 0) tokenSeen = true;
+    // Erst abbrechen, wenn das Token gefunden wurde UND seit 150ms keine
+    // neuen Bytes mehr ankamen. Manche Befehle (z.B. AT+HTTPREAD) schicken
+    // zuerst ein sofortiges "OK" als Befehlsbestaetigung und liefern die
+    // eigentlichen Daten erst danach nach -- ohne Ruhephase wuerde hier
+    // vorzeitig abgebrochen und die Antwort mitten im Inhalt abreissen.
+    if (tokenSeen && (millis() - lastByte > 150)) break;
   }
   return resp;
 }
@@ -183,8 +191,8 @@ void testSimCard() {
 
 bool testNetwork() {
   printHeader("3) NETWORK REGISTRATION TEST");
-  Serial.println(F("Waiting for network registration (up to 300s)..."));
-  if (!modem.waitForNetwork(300000L)) {
+  Serial.println(F("Waiting for network registration (up to 60s)..."));
+  if (!modem.waitForNetwork(60000L)) {
     Serial.println(F("[FAIL] Network registration failed."));
     return false;
   }
@@ -378,9 +386,10 @@ void testReverseGeocode() {
   }
 
   if (statusCode == 200 && dataLen > 0) {
-    Serial.print(F("[OK] HTTP-Status 200, ")); Serial.print(dataLen); Serial.println(F(" Bytes. Lese Inhalt..."));
+    Serial.print(F("[OK] HTTP-Status 200, ")); Serial.print(dataLen); Serial.println(F(" Bytes erwartet. Lese Inhalt..."));
     atSend(String("+HTTPREAD=0,") + dataLen);
     String body = atRead(15000, "OK");
+    Serial.print(F("Tatsaechlich empfangen: ")); Serial.print(body.length()); Serial.println(F(" Zeichen (inkl. AT-Zusatztext)."));
 
     int idx = body.indexOf("\"display_name\":\"");
     if (idx >= 0) {
@@ -389,8 +398,9 @@ void testReverseGeocode() {
       Serial.print(F("[OK] Adresse: ")); Serial.println(body.substring(start, end));
     } else {
       Serial.println(F("[WARN] Konnte 'display_name' nicht in der Antwort finden."));
-      Serial.print(F("Antwort (gekuerzt, erste 300 Zeichen): "));
-      Serial.println(body.substring(0, 300));
+      Serial.print(F("Anfang der Antwort: ")); Serial.println(body.substring(0, 200));
+      int tailStart = body.length() > 200 ? body.length() - 200 : 0;
+      Serial.print(F("Ende der Antwort:   ")); Serial.println(body.substring(tailStart));
     }
   } else {
     Serial.print(F("[WARN] Unerwarteter HTTP-Status: ")); Serial.println(statusCode);
@@ -448,6 +458,10 @@ void setup() {
   Serial.println(F("\n\n=== LilyGO T-A7608X-ESP32S3 Full Hardware Test ==="));
 
   modemPowerOn();
+  // Groesseren UART-Empfangspuffer setzen (ESP32-Standard ist nur 256 Byte),
+  // damit groessere HTTP(S)-Antworten (z.B. beim Reverse-Geocoding) nicht
+  // durch einen vollen Ringpuffer verstuemmelt werden.
+  SerialAT.setRxBufferSize(2048);
   SerialAT.begin(MODEM_BAUDRATE, SERIAL_8N1, MODEM_RX_PIN, MODEM_TX_PIN);
   delay(3000);
 
