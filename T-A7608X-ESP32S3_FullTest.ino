@@ -83,15 +83,38 @@ const char apn[]      = "internet";
 const char gprsUser[] = "";
 const char gprsPass[] = "";
 
-TinyGsm             modem(SerialAT);
-TinyGsmClient        client(modem);
-TinyGsmClientSecure  secureClient(modem, 0); // A76xx-eigener TLS-Stack (AT+CCH...), mux 0
+TinyGsm       modem(SerialAT);
+TinyGsmClient client(modem);
 
 // Vom GNSS-Test befuellt, vom Reverse-Geocoding-Test genutzt
 bool  gpsFixValid = false;
 float gpsLat = 0, gpsLon = 0;
 
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Kleine Helfer fuer direkte, rohe AT-Kommunikation ueber SerialAT.
+// Wird fuer den nativen HTTPS-Client des Modems benutzt (AT+HTTP...),
+// da diese Befehle unabhaengig von der TinyGSM-Socket-Abstraktion sind
+// und auf jeder A76xx-Firmware funktionieren.
+void atSend(const String &cmd) {
+  while (SerialAT.available()) SerialAT.read(); // Eingangspuffer leeren
+  SerialAT.print(F("AT"));
+  SerialAT.println(cmd);
+}
+
+String atRead(unsigned long timeoutMs, const char *token = "OK") {
+  String resp;
+  unsigned long t0 = millis();
+  while (millis() - t0 < timeoutMs) {
+    while (SerialAT.available()) {
+      resp += (char)SerialAT.read();
+      t0 = millis();
+    }
+    if (resp.indexOf(token) >= 0) break;
+  }
+  return resp;
+}
+
 void printHeader(const char *title) {
   Serial.println();
   Serial.println(F("=================================================="));
@@ -292,50 +315,75 @@ void testReverseGeocode() {
     return;
   }
 
-  char path[160];
-  snprintf(path, sizeof(path),
-           "/reverse?format=jsonv2&lat=%.6f&lon=%.6f&zoom=18&addressdetails=1",
+  char url[200];
+  snprintf(url, sizeof(url),
+           "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%.6f&lon=%.6f&zoom=18&addressdetails=1",
            gpsLat, gpsLon);
 
-  Serial.print(F("Frage Adresse bei nominatim.openstreetmap.org ab fuer ("));
-  Serial.print(gpsLat, 6); Serial.print(F(", ")); Serial.print(gpsLon, 6); Serial.println(F(")..."));
+  Serial.print(F("Frage Adresse ab fuer (")); Serial.print(gpsLat, 6);
+  Serial.print(F(", ")); Serial.print(gpsLon, 6); Serial.println(F(")..."));
 
-  // Nominatim erzwingt HTTPS -> hierfuer den eingebauten TLS-Stack des A76xx nutzen (AT+CCH...)
-  if (secureClient.connect("nominatim.openstreetmap.org", 443, 30)) {
-    secureClient.print(F("GET "));
-    secureClient.print(path);
-    secureClient.println(F(" HTTP/1.0"));
-    secureClient.println(F("Host: nominatim.openstreetmap.org"));
-    // Nominatim-Nutzungsrichtlinie verlangt einen aussagekraeftigen User-Agent (kein Standard-Header)
-    secureClient.println(F("User-Agent: T-A7608X-ESP32S3-HardwareTest/1.0"));
-    secureClient.println(F("Connection: close"));
-    secureClient.println();
+  // Der native HTTPS-Client des Modems wird per AT-Befehlen angesteuert
+  // (SIMCom-Standardbefehlssatz, unabhaengig von TinyGSM-Socket-Klassen):
+  //   AT+HTTPINIT -> AT+HTTPPARA -> AT+HTTPACTION -> AT+HTTPREAD -> AT+HTTPTERM
+  atSend("+HTTPTERM"); atRead(2000);  // evtl. offene Vorgaenger-Session schliessen
 
-    String response;
-    unsigned long t0 = millis();
-    while (secureClient.connected() && millis() - t0 < 15000L) {
-      while (secureClient.available()) {
-        response += (char)secureClient.read();
-        t0 = millis();
-      }
+  atSend("+HTTPINIT");
+  if (atRead(5000).indexOf("OK") < 0) {
+    Serial.println(F("[FAIL] AT+HTTPINIT fehlgeschlagen."));
+    modem.gprsDisconnect();
+    return;
+  }
+
+  atSend("+HTTPPARA=\"CID\",1");
+  atRead(2000);
+
+  atSend(String("+HTTPPARA=\"URL\",\"") + url + "\"");
+  atRead(2000);
+
+  // Nominatim-Nutzungsrichtlinie verlangt einen aussagekraeftigen User-Agent
+  atSend("+HTTPPARA=\"USERDATA\",\"User-Agent: T-A7608X-ESP32S3-HardwareTest/1.0\\r\\n\"");
+  atRead(2000); // nicht kritisch, falls diese Firmware USERDATA nicht kennt
+
+  Serial.println(F("Sende HTTPS GET (kann einige Sekunden dauern)..."));
+  atSend("+HTTPACTION=0");
+  atRead(2000); // bestaetigt nur die Entgegennahme des Befehls (sofortiges "OK")
+
+  // Die eigentliche Antwort kommt asynchron als "+HTTPACTION: 0,<status>,<len>"
+  String action = atRead(30000, "+HTTPACTION:");
+  int statusCode = 0, dataLen = 0;
+  int idxTag = action.indexOf("+HTTPACTION:");
+  if (idxTag >= 0) {
+    String tail = action.substring(idxTag);
+    int c1 = tail.indexOf(',');
+    int c2 = tail.indexOf(',', c1 + 1);
+    if (c1 > 0 && c2 > c1) {
+      statusCode = tail.substring(c1 + 1, c2).toInt();
+      int c3 = tail.indexOf('\r', c2);
+      dataLen    = tail.substring(c2 + 1, c3 > 0 ? c3 : tail.length()).toInt();
     }
-    secureClient.stop();
+  }
 
-    int idx = response.indexOf("\"display_name\":\"");
+  if (statusCode == 200 && dataLen > 0) {
+    Serial.print(F("[OK] HTTP-Status 200, ")); Serial.print(dataLen); Serial.println(F(" Bytes. Lese Inhalt..."));
+    atSend(String("+HTTPREAD=0,") + dataLen);
+    String body = atRead(15000, "OK");
+
+    int idx = body.indexOf("\"display_name\":\"");
     if (idx >= 0) {
       int start = idx + strlen("\"display_name\":\"");
-      int end   = response.indexOf('"', start);
-      String address = response.substring(start, end);
-      Serial.print(F("[OK] Adresse: ")); Serial.println(address);
+      int end   = body.indexOf('"', start);
+      Serial.print(F("[OK] Adresse: ")); Serial.println(body.substring(start, end));
     } else {
       Serial.println(F("[WARN] Konnte 'display_name' nicht in der Antwort finden."));
       Serial.print(F("Antwort (gekuerzt, erste 300 Zeichen): "));
-      Serial.println(response.substring(0, 300));
+      Serial.println(body.substring(0, 300));
     }
   } else {
-    Serial.println(F("[FAIL] Konnte keine TLS-Verbindung zu nominatim.openstreetmap.org aufbauen."));
+    Serial.print(F("[WARN] Unerwarteter HTTP-Status: ")); Serial.println(statusCode);
   }
 
+  atSend("+HTTPTERM"); atRead(2000);
   modem.gprsDisconnect();
 }
 
