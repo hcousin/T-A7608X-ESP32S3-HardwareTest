@@ -183,8 +183,8 @@ void testSimCard() {
 
 bool testNetwork() {
   printHeader("3) NETWORK REGISTRATION TEST");
-  Serial.println(F("Waiting for network registration (up to 60s)..."));
-  if (!modem.waitForNetwork(60000L)) {
+  Serial.println(F("Waiting for network registration (up to 300s)..."));
+  if (!modem.waitForNetwork(300000L)) {
     Serial.println(F("[FAIL] Network registration failed."));
     return false;
   }
