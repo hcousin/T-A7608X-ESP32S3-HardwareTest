@@ -97,10 +97,11 @@ Entnommen aus LilyGOs offiziellem Repository
 - Bei der Batteriespannungsmessung wird von einem 1:2-Spannungsteiler
   vor dem ADC-Pin ausgegangen, wie er auf diesem Board verbaut ist.
 - Das Reverse-Geocoding nutzt [Nominatim](https://nominatim.openstreetmap.org)
-  (OpenStreetMap) über HTTPS — dafür kommt der im A76xx-Modem eingebaute
-  TLS-Stack (`AT+CCH...`-Befehle, `TinyGsmClientSecure`) zum Einsatz, eine
-  separate SSL-Bibliothek ist nicht nötig. Der Test läuft nur, wenn Test 5
-  einen GPS-Fix liefern konnte. Nominatims Nutzungsrichtlinie erlaubt max.
-  1 Anfrage pro Sekunde — für gelegentliche Einzeltests im Sketch unkritisch,
-  bei häufigeren Wiederholungen bitte einen eigenen Nominatim-Server oder
-  einen kommerziellen Geocoding-Dienst verwenden.
+  (OpenStreetMap) über HTTPS — dafür kommt der **native HTTPS-Client des
+  Modems** per AT-Befehlen zum Einsatz (`AT+HTTPINIT`/`AT+HTTPPARA`/
+  `AT+HTTPACTION`/`AT+HTTPREAD`), keine zusätzliche SSL-Bibliothek nötig.
+  Der Test läuft nur, wenn Test 5 einen GPS-Fix liefern konnte. Nominatims
+  Nutzungsrichtlinie erlaubt max. 1 Anfrage pro Sekunde — für gelegentliche
+  Einzeltests im Sketch unkritisch, bei häufigeren Wiederholungen bitte
+  einen eigenen Nominatim-Server oder einen kommerziellen Geocoding-Dienst
+  verwenden.
