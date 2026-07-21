@@ -100,8 +100,12 @@ Entnommen aus LilyGOs offiziellem Repository
   (OpenStreetMap) über HTTPS — dafür kommt der **native HTTPS-Client des
   Modems** per AT-Befehlen zum Einsatz (`AT+HTTPINIT`/`AT+HTTPPARA`/
   `AT+HTTPACTION`/`AT+HTTPREAD`), keine zusätzliche SSL-Bibliothek nötig.
-  Der Test läuft nur, wenn Test 5 einen GPS-Fix liefern konnte. Nominatims
-  Nutzungsrichtlinie erlaubt max. 1 Anfrage pro Sekunde — für gelegentliche
-  Einzeltests im Sketch unkritisch, bei häufigeren Wiederholungen bitte
-  einen eigenen Nominatim-Server oder einen kommerziellen Geocoding-Dienst
-  verwenden.
+  Wichtig dabei: SNI (Server Name Indication) wird über
+  `AT+CSSLCFG="enableSNI",0,1` explizit aktiviert — ohne SNI antworten
+  viele Server (u. a. Nominatim) mit `421 Misdirected Request`, da sie
+  beim TLS-Handshake nicht wissen, welches Zertifikat sie ausliefern
+  sollen. Der Test läuft nur, wenn Test 5 einen GPS-Fix liefern konnte.
+  Nominatims Nutzungsrichtlinie erlaubt max. 1 Anfrage pro Sekunde — für
+  gelegentliche Einzeltests im Sketch unkritisch, bei häufigeren
+  Wiederholungen bitte einen eigenen Nominatim-Server oder einen
+  kommerziellen Geocoding-Dienst verwenden.
